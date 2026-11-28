@@ -8,7 +8,7 @@ function playMedia(video,label){video.play().catch(error=>console.warn(label+' c
 function startSiteMedia(){if(calm)return;siteMediaStarted=true;
  if(brandVideo)playMedia(brandVideo,'Brand animation')}
 startSiteMedia();
-const finish=()=>{if(done)return;done=true;if(introSoundOn)setIntroSnd(false);
+const finish=()=>{if(done||!boot)return;done=true;if(introSoundOn)setIntroSnd(false);
  if(A){const intro=A;setTimeout(()=>intro.stop().then(()=>{if(A===intro)A=null}).catch(error=>console.warn('Opening audio could not be stopped:',error)),450)}
  startSiteMedia();boot.classList.add('out');setTimeout(()=>document.body.classList.add('go'),250);
  if(siteSoundAfterIntro)setTimeout(()=>{siteMusic.currentTime=0;setSiteSound(true)},1250);
@@ -19,14 +19,16 @@ function armExit(){let ok=false,y0=0;setTimeout(()=>{ok=true;const cue=$('#cue')
  addEventListener('touchmove',e=>{if(!done&&Math.abs(e.touches[0].clientY-y0)>30)go()},{passive:true});
  addEventListener('keydown',e=>{if(!done&&[' ','ArrowDown','ArrowUp','PageDown','PageUp','End','Home'].includes(e.key)){e.preventDefault();go()}});
  $('#cue').addEventListener('click',go)}
-function begin(withSound){if(begun)return;begun=true;siteSoundAfterIntro=withSound;const t0=performance.now(),video=$('#bvid');
+function begin(withSound){if(begun||!boot)return;begun=true;siteSoundAfterIntro=withSound;const t0=performance.now(),video=$('#bvid');
  boot.classList.remove('gate');boot.classList.add('play','has-vid');$('.sc',boot).setAttribute('preserveAspectRatio',innerWidth/innerHeight>1.2?'xMidYMid slice':'xMidYMid meet');
  video.play().catch(error=>{boot.classList.remove('has-vid');console.error('Intro video could not be played:',error)});
  if(withSound){prepareSiteSound();setIntroSnd(true).then(()=>{if(A&&!done){A.startup();A.scene(t0)}})}armExit()}
-if(calm){boot.remove();document.body.classList.add('go')}
-else{document.body.classList.add('lock');
-$('#start').addEventListener('click',()=>begin(true));$('#quiet').addEventListener('click',()=>begin(false));
-$('#skip').addEventListener('click',finish);addEventListener('keydown',e=>{if(e.key==='Escape')finish()});$('#start').focus({preventScroll:true})}
+if(boot){
+ if(calm){boot.remove();document.body.classList.add('go')}
+ else{document.body.classList.add('lock');
+ $('#start').addEventListener('click',()=>begin(true));$('#quiet').addEventListener('click',()=>begin(false));
+ $('#skip').addEventListener('click',finish);addEventListener('keydown',e=>{if(e.key==='Escape'&&!done)finish()});$('#start').focus({preventScroll:true})}
+}
 
 // nav state + scroll progress
 const nav=$('#nav'),bar=$('#progress');
@@ -146,7 +148,7 @@ async function setIntroSnd(v){introSoundOn=v;
  if(v&&begun){if(!A)A=build();await A.ctx.resume();if(introSoundOn)A.master.gain.setTargetAtTime(VOL,A.ctx.currentTime,.4)}
  else if(A){A.master.gain.setTargetAtTime(0,A.ctx.currentTime,.12);if(!done)introSuspendTimer=setTimeout(()=>{if(!introSoundOn&&A)A.ctx.suspend()},500)}
  introBtn.setAttribute('aria-pressed',v);introBtn.querySelector('span').textContent=v?'Intro sound on':'Intro sound off';document.body.classList.toggle('intro-snd-on',v)}
-introBtn.addEventListener('click',()=>setIntroSnd(!introSoundOn));
+if(introBtn)introBtn.addEventListener('click',()=>setIntroSnd(!introSoundOn));
 const siteMusic=$('#siteMusic');let siteAudio=null,siteSoundOn=false,siteSuspendTimer=null;
 function buildSiteAudio(){
  const ctx=new(window.AudioContext||window.webkitAudioContext)(),master=ctx.createGain(),compressor=ctx.createDynamicsCompressor();
